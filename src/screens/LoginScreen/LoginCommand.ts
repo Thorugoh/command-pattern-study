@@ -1,6 +1,7 @@
 import { action, observable } from "mobx";
 import { AsyncStorage } from "react-native";
 import { Command } from "../../CommandInvoker";
+import { User } from "../../UserModel";
 
 export interface LoginCommandParams {
     email: string;
@@ -8,6 +9,7 @@ export interface LoginCommandParams {
 }
 
 export class LoginCommand implements Command<LoginCommandParams> {
+    
     @observable
     public pending: boolean = false;
 
@@ -18,33 +20,17 @@ export class LoginCommand implements Command<LoginCommandParams> {
     public async execute(params?: LoginCommandParams): Promise<void> {
         
         if(params){
-        this.pending = true
+            this.pending = true
         
-        try{
-            const response = await fetch('https://example.com/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: params.email,
-                    password: params.password,
-                }),
-            });
+            const result = await User.login(params.email, params.password);
 
-            if(response.status === 200){
+            if(result.action === 'success') {
                 // -> go to next screen
-                await AsyncStorage.setItem('last-user-email', params.email);
-                return;
+            } else if (result.error) {
+                this.error = result.error;
             }
 
-            this.error = 'Oupside Daisy. Please try again';
-        } catch(err){
-            // correctly handle network errors
-            this.error = 'Oupside Daisy. Please try again';
-        } finally {
             this.pending = false;
-        }
         }
     }
 
