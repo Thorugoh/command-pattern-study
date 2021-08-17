@@ -2,15 +2,16 @@ import React, { useState , useEffect, useCallback} from 'react';
 import { ActivityIndicator, AsyncStorage, Button, Text } from 'react-native';
 import { View } from 'react-native';
 import { Switch, TextInput } from 'react-native-gesture-handler';
+import { CommandInvoker, useCommand } from '../../CommandInvoker';
+import { ForgotPasswordCommand } from './ForgotPasswordCommand';
+import { LoginCommand } from './LoginCommand';
 
 export interface ILoginScreenProps {}
 
 export const LoginScreen: React.FC<ILoginScreenProps> = (props) => {
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [pending, setPending] = useState<boolean>(false);
     const [rememberMe, setRememberMe] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
         const getLastUsedEmail = async () => {
@@ -26,39 +27,8 @@ export const LoginScreen: React.FC<ILoginScreenProps> = (props) => {
         getLastUsedEmail();
     }, []);
 
-
-    const submit = useCallback(async () => {
-        setPending(true);
-        try{
-            const response = await fetch('https://example.com/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email,
-                    password,
-                }),
-            });
-
-            if(response.status === 200){
-                // -> go to next screen
-                await AsyncStorage.setItem('last-user-email', email);
-                return;
-            }
-
-            setError('Oupside Daisy. Please try again');
-        } catch(err){
-            // correctly handle network errors
-            setError('Oupside Daisy. Please try again');
-        } finally {
-            setPending(false);
-        }
-    }, []);
-
-    const forgotPassword = useCallback(async () => {
-        // -> go to forgot password
-    },[]);
+    const forgotPasswordCommand = useCommand(() => new ForgotPasswordCommand());
+    const loginCommand = useCommand(() => new LoginCommand());
 
     return(
         <View>
@@ -86,21 +56,24 @@ export const LoginScreen: React.FC<ILoginScreenProps> = (props) => {
                 />
             </View>
             <View>
-                <Text onPress={forgotPassword}>Forgot Password</Text>
+                <Text onPress={CommandInvoker(forgotPasswordCommand)}>Forgot Password</Text>
             </View>
 
-            <ActivityIndicator animating={pending} size="large" />
+            <ActivityIndicator animating={loginCommand.pending} size="large" />
 
-            {error ? (
+            {loginCommand.error ? (
                 <View>
-                    <Text>{error}</Text>
+                    <Text>{loginCommand.error}</Text>
                 </View> 
             ): null}
 
             <Button
-                disabled={pending || !password || !email}
+                disabled={!loginCommand.canExecute({
+                    email,
+                    password,
+                })}
                 title="Submit"
-                onPress={submit}
+                onPress={CommandInvoker(loginCommand, {email, password})}
             />
 
         </View>
