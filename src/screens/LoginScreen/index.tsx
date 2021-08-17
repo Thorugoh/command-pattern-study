@@ -3,30 +3,18 @@ import { ActivityIndicator, AsyncStorage, Button, Text } from 'react-native';
 import { View } from 'react-native';
 import { Switch, TextInput } from 'react-native-gesture-handler';
 import { CommandInvoker, useCommand } from '../../CommandInvoker';
+import { User } from '../../UserModel';
+import { RememberMeCommand } from '../RememberMeCommand';
 import { ForgotPasswordCommand } from './ForgotPasswordCommand';
 import { LoginCommand } from './LoginCommand';
 
 export interface ILoginScreenProps {}
 
 export const LoginScreen: React.FC<ILoginScreenProps> = (props) => {
-    const [email, setEmail] = useState<string>('');
-    const [password, setPassword] = useState<string>('');
-    const [rememberMe, setRememberMe] = useState<boolean>(false);
-    
-    useEffect(() => {
-        const getLastUsedEmail = async () => {
-            const lastEmail = await AsyncStorage.getItem('last-user-email');
-            if(lastEmail){
-                setEmail(lastEmail);
-            }
-            const rememberMeSettings = await AsyncStorage.getItem('remember-me');
-            if(rememberMeSettings) {
-                setRememberMe(JSON.parse(rememberMeSettings));
-            }
-        };
-        getLastUsedEmail();
-    }, []);
+    const [email, setEmail] = useState<string>(User.lastUserEmail ?? "");
+    const [password, setPassword] = useState<string>("");
 
+    const rememberMeCommand = useCommand(() => new RememberMeCommand());
     const forgotPasswordCommand = useCommand(() => new ForgotPasswordCommand());
     const loginCommand = useCommand(() => new LoginCommand());
 
@@ -48,10 +36,9 @@ export const LoginScreen: React.FC<ILoginScreenProps> = (props) => {
             <View>
                 <Text>Remember Me</Text>
                 <Switch 
-                    value={rememberMe}
+                    value={User.rememberMe}
                     onValueChange={(value) => {
-                        setRememberMe(value);
-                        AsyncStorage.setItem('remember-me', JSON.stringify(value));
+                        CommandInvoker(rememberMeCommand, {rememberMe: value})
                     }}
                 />
             </View>
